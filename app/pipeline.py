@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import time
 import traceback
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -71,47 +72,52 @@ def _normalize_domain(url: str) -> str:
     return domain
 
 
+def _call_api_with_retry(create_fn, max_retries=3):
+    """Call an API function with retry on rate limit errors."""
+    for attempt in range(max_retries):
+        try:
+            return create_fn()
+        except anthropic.RateLimitError as e:
+            if attempt == max_retries - 1:
+                raise
+            # Wait longer on each retry
+            wait = 30 * (attempt + 1)
+            time.sleep(wait)
+
+
 def _run_claude(prompt: str, model: str = "claude-sonnet-4-20250514") -> str:
     """Call Anthropic API and return the text response."""
     client = anthropic.Anthropic()
-    message = client.messages.create(
+    message = _call_api_with_retry(lambda: client.messages.create(
         model=model,
         max_tokens=8192,
         messages=[{"role": "user", "content": prompt}],
-    )
+    ))
     return message.content[0].text
 
 
 def _run_claude_with_web_search(prompt: str, model: str = "claude-sonnet-4-20250514") -> str:
-    """Call Anthropic API with web search enabled and return text response.
-
-    Uses the built-in web_search tool so Claude can search the internet
-    for product reviews, Reddit posts, Amazon listings, etc.
-    """
+    """Call Anthropic API with web search enabled and return text response."""
     client = anthropic.Anthropic()
 
     messages = [{"role": "user", "content": prompt}]
 
-    # Loop to handle pause_turn (server-side tool loop hit iteration limit)
     for _ in range(5):
-        response = client.messages.create(
+        response = _call_api_with_retry(lambda: client.messages.create(
             model=model,
             max_tokens=8192,
             tools=[
                 {"type": "web_search_20250305", "name": "web_search"},
             ],
             messages=messages,
-        )
+        ))
 
         if response.stop_reason == "pause_turn":
-            # Server-side loop needs to continue — re-send
             messages = [
                 {"role": "user", "content": prompt},
                 {"role": "assistant", "content": response.content},
             ]
             continue
-
-        # Done — extract text
         break
 
     text_parts = []
@@ -231,7 +237,7 @@ def run_pipeline(job_id: str):
                 if name and len(name) > 3:
                     product_names.append(name)
 
-        product_names = product_names[:8]
+        product_names = product_names[:5]
         job.log(f"Selected {len(product_names)} products for review analysis")
         for name in product_names:
             job.log(f"  - {name}")
@@ -242,6 +248,10 @@ def run_pipeline(job_id: str):
 
         product_analyses = []
         for i, product_name in enumerate(product_names):
+            # Pace API calls to stay under 30K tokens/min rate limit
+            if i > 0:
+                time.sleep(30)
+
             job.step = f"Step 2: Analyzing reviews ({i+1}/{len(product_names)})"
             job.log(f"Searching web for reviews: {product_name}")
 

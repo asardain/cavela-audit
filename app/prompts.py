@@ -17,8 +17,8 @@ Domain: {domain}
 ## Product catalog data:
 {products_summary}
 
-## Homepage HTML (first 15000 chars):
-{homepage_html[:15000]}
+## Homepage HTML (first 5000 chars):
+{homepage_html[:5000]}
 
 ## Your task:
 List the brand's top products (up to 10) that are most likely to have public customer reviews.
