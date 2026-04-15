@@ -5,15 +5,14 @@ import os
 import re
 import traceback
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
-from urllib.parse import urlparse, quote_plus
+from urllib.parse import urlparse
 
 import anthropic
 import httpx
 import resend
 
-from app.prompts import product_discovery_prompt, review_search_prompt, audit_report_prompt
+from app.prompts import product_discovery_prompt, review_analysis_prompt, audit_report_prompt
 from app.generate_pdf import build_html, PDF_CSS
 
 
@@ -83,6 +82,46 @@ def _run_claude(prompt: str, model: str = "claude-sonnet-4-20250514") -> str:
     return message.content[0].text
 
 
+def _run_claude_with_web_search(prompt: str, model: str = "claude-sonnet-4-20250514") -> str:
+    """Call Anthropic API with web search enabled and return text response.
+
+    Uses the built-in web_search tool so Claude can search the internet
+    for product reviews, Reddit posts, Amazon listings, etc.
+    """
+    client = anthropic.Anthropic()
+
+    messages = [{"role": "user", "content": prompt}]
+
+    # Loop to handle pause_turn (server-side tool loop hit iteration limit)
+    for _ in range(5):
+        response = client.messages.create(
+            model=model,
+            max_tokens=8192,
+            tools=[
+                {"type": "web_search_20250305", "name": "web_search"},
+            ],
+            messages=messages,
+        )
+
+        if response.stop_reason == "pause_turn":
+            # Server-side loop needs to continue — re-send
+            messages = [
+                {"role": "user", "content": prompt},
+                {"role": "assistant", "content": response.content},
+            ]
+            continue
+
+        # Done — extract text
+        break
+
+    text_parts = []
+    for block in response.content:
+        if block.type == "text":
+            text_parts.append(block.text)
+
+    return "\n".join(text_parts)
+
+
 def _fetch_url(url: str) -> str | None:
     """Fetch a URL, return text or None on failure."""
     try:
@@ -114,54 +153,6 @@ def _fetch_products_json(domain: str) -> list[dict] | None:
         except json.JSONDecodeError:
             break
     return all_products if all_products else None
-
-
-def _search_reviews(domain: str, product_name: str) -> str:
-    """Search for product reviews across multiple platforms and return combined text."""
-    reviews_text = []
-
-    search_queries = [
-        f"{product_name} {domain} review",
-        f"{product_name} {domain} reddit",
-        f"{product_name} {domain} amazon review",
-    ]
-
-    for query in search_queries:
-        encoded = quote_plus(query)
-        # Try fetching search-adjacent review pages
-        urls_to_try = [
-            f"https://www.reddit.com/search.json?q={encoded}&limit=10",
-        ]
-        for url in urls_to_try:
-            text = _fetch_url(url)
-            if text:
-                # For Reddit JSON, extract relevant text
-                try:
-                    data = json.loads(text)
-                    posts = data.get("data", {}).get("children", [])
-                    for post in posts[:5]:
-                        post_data = post.get("data", {})
-                        title = post_data.get("title", "")
-                        selftext = post_data.get("selftext", "")
-                        if title:
-                            reviews_text.append(f"Reddit post: {title}\n{selftext}")
-                except (json.JSONDecodeError, AttributeError):
-                    pass
-
-    # Try Amazon search
-    amazon_url = f"https://www.amazon.com/s?k={quote_plus(product_name + ' ' + domain)}"
-    amazon_text = _fetch_url(amazon_url)
-    if amazon_text:
-        reviews_text.append(f"Amazon search results (raw HTML, extract review snippets):\n{amazon_text[:10000]}")
-
-    # Try Trustpilot
-    trustpilot_domain = domain.replace(".", "-")
-    trustpilot_url = f"https://www.trustpilot.com/review/{domain}"
-    tp_text = _fetch_url(trustpilot_url)
-    if tp_text:
-        reviews_text.append(f"Trustpilot reviews:\n{tp_text[:10000]}")
-
-    return "\n\n---\n\n".join(reviews_text) if reviews_text else "No reviews found."
 
 
 def _generate_pdf(md_text: str, output_path: Path) -> Path:
@@ -234,41 +225,37 @@ def run_pipeline(job_id: str):
             line = line.strip()
             if not line:
                 continue
-            # Match lines that start with - or a number
             match = re.match(r'^(?:\d+[\.\)]\s*|-\s*)\*?\*?(.+?)(?:\*?\*?\s*[-—|]|$)', line)
             if match:
                 name = match.group(1).strip().strip("*")
                 if name and len(name) > 3:
                     product_names.append(name)
 
-        product_names = product_names[:8]  # Cap at 8 products
+        product_names = product_names[:8]
         job.log(f"Selected {len(product_names)} products for review analysis")
         for name in product_names:
             job.log(f"  - {name}")
 
         # -- Step 2: Review Collection & Analysis --
         job.step = "Step 2: Collecting reviews"
-        job.log("Searching for customer reviews across platforms")
+        job.log("Searching for customer reviews across the web")
 
         product_analyses = []
         for i, product_name in enumerate(product_names):
             job.step = f"Step 2: Analyzing reviews ({i+1}/{len(product_names)})"
-            job.log(f"Searching reviews for: {product_name}")
+            job.log(f"Searching web for reviews: {product_name}")
 
-            review_text = _search_reviews(domain, product_name)
-
-            if review_text == "No reviews found.":
-                job.log(f"No reviews found for {product_name} — skipping")
-                continue
-
-            job.log(f"Analyzing feedback for {product_name}")
-            analysis = _run_claude(review_search_prompt(
+            # Use Claude with web search to find and analyze reviews
+            analysis = _run_claude_with_web_search(review_analysis_prompt(
                 domain=domain,
                 product_name=product_name,
-                product_category="",
-                review_text=review_text,
             ))
-            product_analyses.append(analysis)
+
+            if analysis:
+                product_analyses.append(analysis)
+                job.log(f"Review analysis complete: {product_name}")
+            else:
+                job.log(f"No review data found for {product_name}")
 
         if not product_analyses:
             raise RuntimeError(f"Could not find reviews for any products from {domain}")

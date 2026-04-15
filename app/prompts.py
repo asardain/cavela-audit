@@ -31,21 +31,26 @@ Output as a simple list. Focus on their core/flagship products, not accessories 
 """
 
 
-def review_search_prompt(
+def review_analysis_prompt(
     domain: str,
     product_name: str,
-    product_category: str,
-    review_text: str,
 ) -> str:
     return f"""You are a product quality analyst for Cavela, a manufacturing company.
 
-Analyze the following customer reviews for "{product_name}" by {domain}.
+Your task is to find and analyze customer reviews for "{product_name}" by {domain}.
 
-## Review data collected:
-{review_text[:20000]}
+## Step 1: Search for reviews
+Use web search to find customer reviews for this product. Search for:
+- "{product_name}" {domain} reviews
+- "{product_name}" {domain} reddit
+- "{product_name}" {domain} amazon reviews
+- "{product_name}" complaints OR problems OR issues
 
-## Your task:
-Extract ONLY negative feedback and constructive criticism. Ignore praise.
+Look on Amazon, Reddit, Trustpilot, Google Reviews, and any category-specific review sites.
+
+## Step 2: Analyze the reviews
+Extract ONLY negative feedback and constructive criticism. Ignore praise entirely.
+Focus on fixable manufacturing or quality issues.
 
 For each issue found:
 1. Describe the complaint in neutral, manufacturing-focused language
@@ -58,10 +63,10 @@ For each issue found:
 - Avoid charged language ("failing", "terrible") — use manufacturing terminology ("delamination", "inconsistent stitching", "QC variance")
 - Let the exact customer quotes carry the emotional weight
 
-Output format:
+## Output format:
 ### {product_name}
 
-**Overall sentiment:** [one line summary]
+**Overall sentiment:** [one line summary based on what you found]
 
 **Issues found:**
 
@@ -74,7 +79,7 @@ Output format:
 
 2. [next issue...]
 
-If no meaningful negative feedback was found, say so briefly.
+If no meaningful negative feedback was found, say so briefly and explain what you searched.
 """
 
 
