@@ -8,8 +8,8 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #fafafa;
-            color: #1a1a1a;
+            background: #0a0a0a;
+            color: #e5e5e5;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -31,20 +31,21 @@
             font-size: 2.5rem;
             font-weight: 700;
             margin-bottom: 2rem;
+            color: #fff;
         }
         h1 .audit {
-            color: #0000ff;
+            color: #4d4dff;
         }
         .brand {
-            color: #666;
+            color: #888;
             font-size: 0.9rem;
             margin-bottom: 2rem;
         }
         .spinner {
             width: 32px;
             height: 32px;
-            border: 3px solid #eee;
-            border-top: 3px solid #1a1a1a;
+            border: 3px solid #222;
+            border-top: 3px solid #e5e5e5;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
             margin: 0 auto 1.5rem;
@@ -54,47 +55,48 @@
             font-size: 1rem;
             font-weight: 500;
             margin-bottom: 0.5rem;
+            color: #e5e5e5;
         }
         .status {
-            color: #666;
+            color: #888;
             font-size: 0.85rem;
         }
         .steps-log {
             margin-top: 1.5rem;
             text-align: left;
             font-size: 0.85rem;
-            color: #999;
+            color: #555;
             line-height: 1.8;
         }
-        .steps-log .done { color: #1a1a1a; }
-        .steps-log .done::before { content: '\2713\0020'; color: #2a2; }
-        .steps-log .active { color: #1a1a1a; font-weight: 500; }
+        .steps-log .done { color: #e5e5e5; }
+        .steps-log .done::before { content: '\2713\0020'; color: #4d4dff; }
+        .steps-log .active { color: #e5e5e5; font-weight: 500; }
         .steps-log .active::before { content: '\25CB\0020'; }
-        .steps-log .pending { color: #ccc; }
+        .steps-log .pending { color: #444; }
         .steps-log .pending::before { content: '\25CB\0020'; }
 
         .activity-feed {
             margin-top: 1.5rem;
             text-align: left;
-            border-top: 1px solid #eee;
+            border-top: 1px solid #222;
             padding-top: 1rem;
             max-height: 260px;
             overflow-y: auto;
         }
         .activity-feed .feed-item {
             font-size: 0.82rem;
-            color: #888;
+            color: #666;
             line-height: 1.6;
             padding: 0.15rem 0;
             opacity: 0;
             animation: fadeIn 0.3s ease forwards;
         }
         .activity-feed .feed-item:last-child {
-            color: #1a1a1a;
+            color: #e5e5e5;
             font-weight: 500;
         }
         .activity-feed .feed-item .timestamp {
-            color: #bbb;
+            color: #555;
             margin-right: 0.5rem;
             font-size: 0.75rem;
             font-variant-numeric: tabular-nums;
@@ -105,7 +107,7 @@
         }
 
         .error-msg {
-            color: #c00;
+            color: #f44;
             font-size: 0.9rem;
             margin-top: 1rem;
         }
@@ -114,7 +116,7 @@
 </head>
 <body>
     <div class="container">
-        <img src="/static/logo.png" alt="Cavela" class="logo">
+        <img src="/static/logo-white.png" alt="Cavela" class="logo">
         <h1>Cavela<span class="audit">Audit</span></h1>
         <p class="brand">{{ brand_url }}</p>
 
@@ -135,7 +137,7 @@
         <div class="activity-feed" id="activity-feed"></div>
 
         <div id="done-section" class="hidden">
-            <p style="font-size: 1.05rem; font-weight: 500; margin-top: 1.5rem;">Report sent to your email.</p>
+            <p style="font-size: 1.05rem; font-weight: 500; margin-top: 1.5rem; color: #fff;">Report sent to your email.</p>
         </div>
 
         <div id="error-section" class="hidden">
@@ -171,7 +173,7 @@
 
             const prev = feed.querySelector('.feed-item:last-child');
             if (prev) {
-                prev.style.color = '#888';
+                prev.style.color = '#666';
                 prev.style.fontWeight = 'normal';
             }
 

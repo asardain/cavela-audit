@@ -8,8 +8,8 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #fafafa;
-            color: #1a1a1a;
+            background: #0a0a0a;
+            color: #e5e5e5;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -30,12 +30,13 @@
             font-size: 2.5rem;
             font-weight: 700;
             margin-bottom: 2rem;
+            color: #fff;
         }
         h1 .audit {
-            color: #0000ff;
+            color: #4d4dff;
         }
         p.subtitle {
-            color: #666;
+            color: #999;
             font-size: 0.95rem;
             margin-bottom: 2rem;
             line-height: 1.5;
@@ -45,27 +46,32 @@
             font-size: 0.85rem;
             font-weight: 500;
             margin-bottom: 0.4rem;
-            color: #333;
+            color: #ccc;
         }
         input[type="text"],
         input[type="email"] {
             width: 100%;
             padding: 0.7rem 0.85rem;
-            border: 1px solid #ddd;
+            border: 1px solid #333;
             border-radius: 6px;
             font-size: 0.95rem;
             margin-bottom: 1.2rem;
             outline: none;
             transition: border-color 0.15s;
+            background: #141414;
+            color: #e5e5e5;
+        }
+        input::placeholder {
+            color: #666;
         }
         input:focus {
-            border-color: #1a1a1a;
+            border-color: #4d4dff;
         }
         button {
             width: 100%;
             padding: 0.75rem;
-            background: #1a1a1a;
-            color: #fff;
+            background: #e5e5e5;
+            color: #0a0a0a;
             border: none;
             border-radius: 6px;
             font-size: 0.95rem;
@@ -73,13 +79,14 @@
             cursor: pointer;
             transition: background 0.15s;
         }
-        button:hover { background: #333; }
+        button:hover { background: #fff; }
         button:disabled {
-            background: #999;
+            background: #444;
+            color: #888;
             cursor: not-allowed;
         }
         .error {
-            color: #c00;
+            color: #f44;
             font-size: 0.85rem;
             margin-top: 0.75rem;
         }
@@ -87,7 +94,7 @@
 </head>
 <body>
     <div class="container">
-        <img src="/static/logo.png" alt="Cavela" class="logo">
+        <img src="/static/logo-white.png" alt="Cavela" class="logo">
         <h1>Cavela<span class="audit">Audit</span></h1>
         <p class="subtitle">Enter a brand's website and your email. We'll analyze public customer reviews, identify recurring product issues, and send you a detailed report with manufacturing-focused insights.</p>
 
