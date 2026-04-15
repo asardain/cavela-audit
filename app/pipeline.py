@@ -80,8 +80,8 @@ def _call_api_with_retry(create_fn, max_retries=3):
         except anthropic.RateLimitError as e:
             if attempt == max_retries - 1:
                 raise
-            # Wait longer on each retry
-            wait = 30 * (attempt + 1)
+            # Wait 60s+ on each retry to let the rate limit window reset
+            wait = 60 * (attempt + 1)
             time.sleep(wait)
 
 
@@ -250,7 +250,7 @@ def run_pipeline(job_id: str):
         for i, product_name in enumerate(product_names):
             # Pace API calls to stay under 30K tokens/min rate limit
             if i > 0:
-                time.sleep(30)
+                time.sleep(60)
 
             job.step = f"Step 2: Analyzing reviews ({i+1}/{len(product_names)})"
             job.log(f"Searching web for reviews: {product_name}")
@@ -275,6 +275,7 @@ def run_pipeline(job_id: str):
         # -- Step 3: Generate Report --
         job.step = "Step 3: Writing audit report"
         job.log("Compiling findings into audit report")
+        time.sleep(60)  # Pause before the report call to reset rate limit window
 
         brand_name_raw = domain.split(".")[0].capitalize()
         all_analyses = "\n\n---\n\n".join(product_analyses)
