@@ -237,7 +237,7 @@ def run_pipeline(job_id: str):
                 if name and len(name) > 3:
                     product_names.append(name)
 
-        product_names = product_names[:5]
+        product_names = product_names[:3]
         job.log(f"Selected {len(product_names)} products for review analysis")
         for name in product_names:
             job.log(f"  - {name}")
