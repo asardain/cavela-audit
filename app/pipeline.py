@@ -237,10 +237,7 @@ def run_pipeline(job_id: str):
                 if name and len(name) > 3:
                     product_names.append(name)
 
-        product_names = product_names[:3]
-        job.log(f"Selected {len(product_names)} products for review analysis")
-        for name in product_names:
-            job.log(f"  - {name}")
+        job.log(f"Identified {len(product_names)} products, will analyze top picks")
 
         # -- Step 2: Review Collection & Analysis --
         job.step = "Step 2: Collecting reviews"
@@ -252,10 +249,9 @@ def run_pipeline(job_id: str):
             if i > 0:
                 time.sleep(60)
 
-            job.step = f"Step 2: Analyzing reviews ({i+1}/{len(product_names)})"
+            job.step = f"Step 2: Analyzing reviews — {product_name}"
             job.log(f"Searching web for reviews: {product_name}")
 
-            # Use Claude with web search to find and analyze reviews
             analysis = _run_claude_with_web_search(review_analysis_prompt(
                 domain=domain,
                 product_name=product_name,
@@ -264,8 +260,9 @@ def run_pipeline(job_id: str):
             if analysis:
                 product_analyses.append(analysis)
                 job.log(f"Review analysis complete: {product_name}")
+                break  # Got a good result — stop here
             else:
-                job.log(f"No review data found for {product_name}")
+                job.log(f"No review data found for {product_name} — trying next product")
 
         if not product_analyses:
             raise RuntimeError(f"Could not find reviews for any products from {domain}")
