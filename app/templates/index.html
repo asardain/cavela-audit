@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cavela Audit</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #fafafa;
+            color: #1a1a1a;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 440px;
+            padding: 2rem;
+        }
+        .logo {
+            position: fixed;
+            top: 1.2rem;
+            right: 1.5rem;
+            height: 28px;
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+        }
+        h1 .audit {
+            color: #0000ff;
+        }
+        p.subtitle {
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 0.4rem;
+            color: #333;
+        }
+        input[type="text"],
+        input[type="email"] {
+            width: 100%;
+            padding: 0.7rem 0.85rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            margin-bottom: 1.2rem;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        input:focus {
+            border-color: #1a1a1a;
+        }
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background: #1a1a1a;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        button:hover { background: #333; }
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+        .error {
+            color: #c00;
+            font-size: 0.85rem;
+            margin-top: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="/static/logo.png" alt="Cavela" class="logo">
+        <h1>Cavela<span class="audit">Audit</span></h1>
+        <p class="subtitle">Enter a brand's website and your email. We'll analyze public customer reviews, identify recurring product issues, and send you a detailed report with manufacturing-focused insights.</p>
+
+        <form id="form">
+            <label for="brand_url">Brand website</label>
+            <input type="text" id="brand_url" name="brand_url" placeholder="example.com" required>
+
+            <label for="email">Your email</label>
+            <input type="email" id="email" name="email" placeholder="you@company.com" required>
+
+            <button type="submit" id="btn">Run Audit</button>
+            <div class="error" id="error"></div>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn');
+            const err = document.getElementById('error');
+            btn.disabled = true;
+            btn.textContent = 'Starting...';
+            err.textContent = '';
+
+            const form = new FormData(e.target);
+
+            try {
+                const res = await fetch('/submit', { method: 'POST', body: form });
+                const data = await res.json();
+                if (data.job_id) {
+                    window.location.href = '/progress/' + data.job_id;
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            } catch (error) {
+                err.textContent = error.message;
+                btn.disabled = false;
+                btn.textContent = 'Run Audit';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cavela Audit — Processing</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #fafafa;
+            color: #1a1a1a;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 540px;
+            padding: 2rem;
+            text-align: center;
+        }
+        .logo {
+            position: fixed;
+            top: 1.2rem;
+            right: 1.5rem;
+            height: 28px;
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+        }
+        h1 .audit {
+            color: #0000ff;
+        }
+        .brand {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #eee;
+            border-top: 3px solid #1a1a1a;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1.5rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .step {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .status {
+            color: #666;
+            font-size: 0.85rem;
+        }
+        .steps-log {
+            margin-top: 1.5rem;
+            text-align: left;
+            font-size: 0.85rem;
+            color: #999;
+            line-height: 1.8;
+        }
+        .steps-log .done { color: #1a1a1a; }
+        .steps-log .done::before { content: '\2713\0020'; color: #2a2; }
+        .steps-log .active { color: #1a1a1a; font-weight: 500; }
+        .steps-log .active::before { content: '\25CB\0020'; }
+        .steps-log .pending { color: #ccc; }
+        .steps-log .pending::before { content: '\25CB\0020'; }
+
+        .activity-feed {
+            margin-top: 1.5rem;
+            text-align: left;
+            border-top: 1px solid #eee;
+            padding-top: 1rem;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+        .activity-feed .feed-item {
+            font-size: 0.82rem;
+            color: #888;
+            line-height: 1.6;
+            padding: 0.15rem 0;
+            opacity: 0;
+            animation: fadeIn 0.3s ease forwards;
+        }
+        .activity-feed .feed-item:last-child {
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+        .activity-feed .feed-item .timestamp {
+            color: #bbb;
+            margin-right: 0.5rem;
+            font-size: 0.75rem;
+            font-variant-numeric: tabular-nums;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .error-msg {
+            color: #c00;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="/static/logo.png" alt="Cavela" class="logo">
+        <h1>Cavela<span class="audit">Audit</span></h1>
+        <p class="brand">{{ brand_url }}</p>
+
+        <div id="loading">
+            <div class="spinner"></div>
+            <div class="step" id="step-text">Starting...</div>
+            <div class="status" id="status-text">This takes a few minutes</div>
+        </div>
+
+        <div class="steps-log" id="steps-log">
+            <div id="s1" class="pending">Identifying products</div>
+            <div id="s2" class="pending">Collecting & analyzing reviews</div>
+            <div id="s3" class="pending">Writing audit report</div>
+            <div id="s4" class="pending">Generating PDF</div>
+            <div id="s5" class="pending">Sending results</div>
+        </div>
+
+        <div class="activity-feed" id="activity-feed"></div>
+
+        <div id="done-section" class="hidden">
+            <p style="font-size: 1.05rem; font-weight: 500; margin-top: 1.5rem;">Report sent to your email.</p>
+        </div>
+
+        <div id="error-section" class="hidden">
+            <p class="error-msg" id="error-msg"></p>
+        </div>
+    </div>
+
+    <script>
+        const JOB_ID = "{{ job_id }}";
+        const STEP_MAP = {
+            'Step 1': 's1',
+            'Step 2': 's2',
+            'Step 3': 's3',
+            'Step 4': 's4',
+            'Step 5': 's5',
+        };
+
+        let seenCount = 0;
+        const startTime = Date.now();
+
+        function formatElapsed() {
+            const secs = Math.floor((Date.now() - startTime) / 1000);
+            const m = Math.floor(secs / 60);
+            const s = secs % 60;
+            return m > 0 ? `${m}m ${s}s` : `${s}s`;
+        }
+
+        function updateFeed(messages) {
+            if (messages.length <= seenCount) return;
+
+            const feed = document.getElementById('activity-feed');
+            const newMessages = messages.slice(seenCount);
+
+            const prev = feed.querySelector('.feed-item:last-child');
+            if (prev) {
+                prev.style.color = '#888';
+                prev.style.fontWeight = 'normal';
+            }
+
+            for (const msg of newMessages) {
+                const div = document.createElement('div');
+                div.className = 'feed-item';
+                div.innerHTML = `<span class="timestamp">${formatElapsed()}</span>${msg}`;
+                feed.appendChild(div);
+            }
+
+            seenCount = messages.length;
+            feed.scrollTop = feed.scrollHeight;
+        }
+
+        function updateStepLog(currentStep) {
+            const steps = ['s1', 's2', 's3', 's4', 's5'];
+            let currentIdx = -1;
+
+            for (const [prefix, id] of Object.entries(STEP_MAP)) {
+                if (currentStep.startsWith(prefix)) {
+                    currentIdx = steps.indexOf(id);
+                    break;
+                }
+            }
+
+            steps.forEach((id, idx) => {
+                const el = document.getElementById(id);
+                if (idx < currentIdx) {
+                    el.className = 'done';
+                } else if (idx === currentIdx) {
+                    el.className = 'active';
+                } else {
+                    el.className = 'pending';
+                }
+            });
+        }
+
+        async function poll() {
+            try {
+                const res = await fetch('/status/' + JOB_ID);
+                const data = await res.json();
+
+                document.getElementById('step-text').textContent = data.step;
+
+                if (data.step) updateStepLog(data.step);
+                if (data.messages) updateFeed(data.messages);
+
+                if (data.status === 'done') {
+                    document.getElementById('loading').classList.add('hidden');
+                    document.querySelectorAll('#steps-log div').forEach(el => el.className = 'done');
+                    document.getElementById('done-section').classList.remove('hidden');
+                    return;
+                }
+
+                if (data.status === 'error') {
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('error-section').classList.remove('hidden');
+                    document.getElementById('error-msg').textContent = 'Error: ' + (data.error || 'Unknown error');
+                    return;
+                }
+
+                setTimeout(poll, 2000);
+            } catch (e) {
+                setTimeout(poll, 3000);
+            }
+        }
+
+        poll();
+    </script>
+</body>
+</html>
